@@ -2,6 +2,14 @@
 
 **TODO: Add description**
 
+## Building
+
+```elixir
+iex -S mix
+```
+
+Hit `control+x` twice to stop iex
+
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
