@@ -2,7 +2,7 @@ defmodule KNN.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :kNN,
+    [app: :kNN ,
      version: "0.1.0",
      elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
@@ -15,7 +15,10 @@ defmodule KNN.Mixfile do
   # Type "mix help compile.app" for more information
   def application do
     # Specify extra applications you'll use from Erlang/Elixir
-    [extra_applications: [:logger]]
+    [
+      mod: {KNN, []},
+      applications: [:logger, :poolboy]
+    ]
   end
 
   # Dependencies can be Hex packages:
@@ -28,6 +31,16 @@ defmodule KNN.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    []
+    [
+      {:poolboy, "~> 1.5"},
+      {:gen_stage, "~> 0.11"}
+    ]
+  end
+
+  defp aliases do
+    # "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+    [
+      
+    ]
   end
 end
