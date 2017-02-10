@@ -8,7 +8,7 @@
 iex -S mix
 ```
 
-Hit `control+x` twice to stop iex
+Hit `control+c` twice to stop iex
 
 ## Installation
 
