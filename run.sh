@@ -8,4 +8,4 @@ if [ -z "$1" ]; then
 fi
 
 
-NODE_TYPE=$nodeType iex --name $nodeName --erl "-config sys.config" -S mix
+NODE_NAME=$nodeName NODE_TYPE=$nodeType iex --name $nodeName --erl "-config sys.config" -S mix
