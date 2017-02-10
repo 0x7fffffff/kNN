@@ -5,23 +5,20 @@ defmodule KNN do
 
   use Application
 
+  require Logger
+
   def start(_type, _args) do
-    children = []
+    Logger.warn "Starting node \"" <> System.get_env("NODE_NAME") <> "\" of type: \"" <> System.get_env("NODE_TYPE") <> "\""
+    children = case System.get_env("NODE_TYPE") do
+      "command" ->
+        []
+      "store" ->
+        []
+      "mesh" ->
+        []
+    end
+
     opts = [strategy: :one_for_one, name: KNN.Supervisor]
     Supervisor.start_link(children, opts)
-  end
-
-
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> KNN.hello
-      :world
-
-  """
-  def hello do
-    :world
   end
 end
