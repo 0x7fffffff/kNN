@@ -2,12 +2,23 @@ defmodule KNN.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :kNN ,
-     version: "0.1.0",
-     elixir: "~> 1.4",
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     deps: deps()]
+    [
+      app: :kNN ,
+      version: "0.1.0",
+      elixir: "~> 1.4",
+      build_embedded: Mix.env == :prod,
+      start_permanent: Mix.env == :prod,
+      deps: deps(),
+      dialyzer: [ 
+        flags: [
+          "-Wunmatched_returns", "-Werror_handling", 
+          "-Wrace_conditions", "-Wunderspecs"
+        ],
+        paths: [
+          "_build/dev/lib/kNN/ebin/"
+        ]
+      ]
+   ]
   end
 
   # Configuration for the OTP application
@@ -33,7 +44,8 @@ defmodule KNN.Mixfile do
   defp deps do
     [
       {:poolboy, "~> 1.5"},
-      {:gen_stage, "~> 0.11"}
+      {:gen_stage, "~> 0.11"},
+      {:dialyxir, "~> 0.4", only: [:dev], runtime: false}
     ]
   end
 
