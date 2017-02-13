@@ -12,6 +12,10 @@ defmodule KNN.Node.Store do
 		GenServer.start_link __MODULE__, opts, args
 	end
 
+	def exists?(record) do
+		fetch(record) != nil
+	end
+
   def fetch(record) do
     case get(record) do
       {:not_found} -> 
