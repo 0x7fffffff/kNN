@@ -1,9 +1,10 @@
-defmodule KNN.Command do
+defmodule KNN.Node.Command do
 	use GenServer
 
 	require Logger
 
-	def start_link do
+	def start_link(args) do
+		Logger.debug "Starting commander with args: #{args}"
 		GenServer.start_link __MODULE__, %{}
 	end
 
@@ -22,13 +23,13 @@ defmodule KNN.Command do
 	defp start do
     # should probably move data path into ENV VAR
     path = "data/iris/iris.dat"
-    {:ok, a} = GenStage.start_link(KNN.Helper.KeelParser, 0)
-    {:ok, b} = GenStage.start_link(KNN.Helper.KeelParserProducerConsumer, 2)
+    {:ok, a} = GenStage.start_link(KNN.Helper.KeelParser, path)
+    {:ok, b} = GenStage.start_link(KNN.Helper.KeelParserProducerConsumer, [])
     {:ok, c} = GenStage.start_link(KNN.Helper.TestConsumer, :ok)
 
     GenStage.sync_subscribe(b, to: a)
     GenStage.sync_subscribe(c, to: b)
 
-    Process.sleep(:infinity)
+    # Process.sleep(:infinity)
 	end
 end

@@ -9,15 +9,23 @@ defmodule KNN do
 
   require Logger
 
+  alias KNN.Node.Command
+  alias KNN.Node.Command.Apollo
+  alias KNN.Node.Store
+
   def start(_type, _args) do
     Logger.debug "Starting node \"" <> System.get_env("NODE_NAME") <> "\" of type: \"" <> System.get_env("NODE_TYPE") <> "\""
+
     children = case System.get_env("NODE_TYPE") do
       "command" ->
         [
-          worker(KNN.Command, [], [name: KNN.Command])
+          worker(Command, [:command], [name: Command]),
+          worker(Apollo, [:apollo], [name: Apollo])
         ]
       "store" ->
-        []
+        [
+          worker(Store, [[name: :knn_storage_server]])
+        ]
       "mesh" ->
         []
     end
