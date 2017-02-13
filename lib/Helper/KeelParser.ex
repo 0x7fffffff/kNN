@@ -45,14 +45,18 @@ defmodule KNN.Helper.KeelHeader do
 end
 
 defmodule KNN.Helper.KeelDataRow do
-	
+	@enforce_keys [:data_components]
+	defstruct [:data_components]
 end
 
 defmodule KNN.Helper.KeelDataset do
+	@enforce_keys [:headers, :stream]
+	defstruct [:headers, :stream]
+
 	alias KNN.Helper.KeelDataRow, as: Row
 
 	@spec parse(String.t, ((Row) -> nil)) :: nil
-	def parse(path, completion) do
+	def parse(path, row_handler) do
 		
 	end
 end
@@ -61,15 +65,22 @@ end
 defmodule KNN.Helper.KeelParser do
 	use GenStage
 
+	require Logger
+
 	alias KNN.Helper.KeelHeader, as: Header
 
 	def init(path) do
+		Logger.warn "keel parser producer init"
+		# do initial parsing here, and pass off a KeelDataset
 		{:producer, path}	
 	end
 
-	def handle_demand(demand, counter) when demand > 0 do
-		events = Enum.to_list(counter..counter+demand-1)
-		{:noreply, events, counter + demand}
+	def handle_demand(demand, path) when demand > 0 do
+		Logger.warn demand
+		Logger.warn path
+
+		# events = Enum.to_list(counter..counter+demand-1)
+		{:noreply, ["test event"], ""}
 	end
 
 	def parse() do
@@ -80,21 +91,24 @@ end
 defmodule KNN.Helper.KeelParserProducerConsumer do
 	use GenStage
 
+	require Logger
+
 	def init(number) do
+		Logger.error "keel producer/consumer init"
 		{:producer_consumer, number}
 	end
 
-	def handle_events(events, _from, number) do
-    events =
-      for event <- events,
-          entry <- event..event+number,
-          do: entry
-    {:noreply, events, number}
+	def handle_events(events, _from, payload) do
+		Logger.error "keel product/consumer received event: #{payload}"
+
+    {:noreply, ["test event"], payload}
    end
 end
 
 defmodule KNN.Helper.TestConsumer do
 	use GenStage
+
+	require Logger
 
 	def init(:ok) do
 		{:consumer, :the_state_does_not_matter}
@@ -103,7 +117,7 @@ defmodule KNN.Helper.TestConsumer do
 	def handle_events(events, _from, state) do
 		:timer.sleep(1000)
 
-		IO.inspect events
+		Logger.info inspect events
 
 		{:noreply, [], state}
 	end
