@@ -23,12 +23,20 @@ defmodule KNN.Node.Command do
 	defp start do
     # should probably move data path into ENV VAR
     path = "data/iris/iris.dat"
-    {:ok, a} = GenStage.start_link(KNN.Helper.KeelParser, path)
-    {:ok, b} = GenStage.start_link(KNN.Helper.KeelParserProducerConsumer, [])
-    {:ok, c} = GenStage.start_link(KNN.Helper.TestConsumer, :ok)
+    KNN.Helper.KeelParser.parse_from_file path, fn(result) -> 
+    	case result do
+    	  {dataset, row} ->
+		    	Logger.warn "received record: #{row}"
+		    :error ->
+		    	Logger.error "Parser failed"
+    	end
+    end
+    # {:ok, a} = GenStage.start_link(KNN.Helper.KeelParser, path)
+    # {:ok, b} = GenStage.start_link(KNN.Helper.KeelParserProducerConsumer, [])
+    # {:ok, c} = GenStage.start_link(KNN.Helper.TestConsumer, :ok)
 
-    GenStage.sync_subscribe(b, to: a)
-    GenStage.sync_subscribe(c, to: b)
+    # GenStage.sync_subscribe(b, to: a)
+    # GenStage.sync_subscribe(c, to: b)
 
     # Process.sleep(:infinity)
 	end

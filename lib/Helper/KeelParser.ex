@@ -1,3 +1,5 @@
+
+
 # @relation iris
 # @attribute SepalLength real [4.3, 7.9]
 # @attribute SepalWidth real [2.0, 4.4]
@@ -8,40 +10,71 @@
 # @outputs Class
 
 defmodule KNN.Helper.KeelAttribute do
-	@valid_outer_data_type [:range, :set]
-	@valid_inner_data_type [:real, :binary]
+	defstruct [:name, :inner_data_type, :data]
 
-	@enforce_keys [:name, :inner_data_type]
-	defstruct [:name, :inner_data_type, :outer_data_type] 
-
+	# This is sloppy, but it should work for our test data.
 	@spec parse(String.t) :: __MODULE__
 	def parse(line) do
-		components = line |> String.split
-		# %__MODULE__{
+		opts = line
+		|> String.trim
+		|> String.split
+		|> Enum.reduce(%{}, fn(component, acc) -> 
+			component = component |> String.trim
 
-		# }
+			if Map.has_key? acc, :name do
+				{collection_type, items} = parse_collection component
+
+				if collection_type do
+					Map.put acc, :data, {collection_type, items}
+				else
+					data_type = get_data_type component
+
+					if data_type do
+						Map.put acc, :inner_date_type, data_type
+					else
+						# Need to build in error checking, this can crash.
+						acc
+					end
+				end
+			else
+				Map.put acc, :name, component
+			end
+		end)
+
+		struct __MODULE__, opts
 	end
-end
 
-defmodule KNN.Helper.KeelHeader do
-
-	@enforce_keys [:attribute, :value]
-	defstruct [:attribute, :value]
-
-  # @spec add(number, number) :: {number, String.t}
-  # def add(x, y), do: {x + y, "You need a calculator to do that?!"}
-
-  @spec isHeader(String.t) :: boolean
-	def isHeader(line) when not is_nil(line) do
-		
+	@spec parse_collection(String.t) :: {:range | :set | nil, [any]}
+	defp parse_collection(str) do
+		cond do
+		  String.starts_with?(str, "[") and String.ends_with?(str, "]") ->
+				{:range, split_collection str}
+			String.starts_with?(str, "{") and String.ends_with?(str, "}") ->
+				{:set, split_collection str}
+			true ->
+				{nil, []}
+		end
 	end
-	def isHeader(_), do: false
 
-	@spec parse(String.t) :: __MODULE__
-	def parse(line) when not is_nil(line) do
-		
+	@spec split_collection(String.t) :: [any]
+	defp split_collection(str) do
+  	str
+  	|> String.trim_leading("[")
+  	|> String.trim_trailing("]")
+  	|> String.split(", ")
 	end
-	def parse(_), do: nil
+
+	@spec get_data_type(String.t) :: :number | :binary | nil
+	defp get_data_type(str) do
+		case str do
+		  "real" ->
+		  	:number
+		  "string" ->
+		  	:binary
+		  _ ->
+		  	nil
+		end
+	end
 end
 
 defmodule KNN.Helper.KeelDataRow do
@@ -50,43 +83,142 @@ defmodule KNN.Helper.KeelDataRow do
 end
 
 defmodule KNN.Helper.KeelDataset do
-	@enforce_keys [:headers, :stream]
-	defstruct [:headers, :stream]
+	# @enforce_keys [:relation, :attributes, :input_attributes, :output_attributes]
+	@enforce_keys [:valid]
+	defstruct [:relation, :attributes, :input_attributes, :output_attributes, :valid]
 
+	alias KNN.Helper.KeelDataset, as: Dataset
 	alias KNN.Helper.KeelDataRow, as: Row
-
-	@spec parse(String.t, ((Row) -> nil)) :: nil
-	def parse(path, row_handler) do
-		
-	end
-end
-
-
-defmodule KNN.Helper.KeelParser do
-	use GenStage
+	alias KNN.Helper.KeelAttribute, as: Attribute
 
 	require Logger
 
-	alias KNN.Helper.KeelHeader, as: Header
-
-	def init(path) do
-		Logger.warn "keel parser producer init"
-		# do initial parsing here, and pass off a KeelDataset
-		{:producer, path}	
+	@spec parse_header(__MODULE__, String.t) :: __MODULE__
+	def parse_header(dataset, "@relation" <> line) do
+		line = line |> String.trim_leading
+		%{dataset | relation: line}
 	end
 
-	def handle_demand(demand, path) when demand > 0 do
-		Logger.warn demand
-		Logger.warn path
+	@spec parse_header(__MODULE__, String.t) :: __MODULE__
+	def parse_header(dataset, "@attribute" <> line) do
+		attribute = line 
+		|> String.trim_leading
+		|> Attribute.parse
 
-		# events = Enum.to_list(counter..counter+demand-1)
-		{:noreply, ["test event"], ""}
+		attributes = if dataset.attributes do
+			dataset.attributes ++ [attribute]
+		else
+			[attribute]
+		end
+
+		%{dataset | attributes: attributes}
 	end
 
-	def parse() do
-		
+	@spec parse_header(__MODULE__, String.t) :: __MODULE__
+	def parse_header(dataset, "@inputs" <> line) do
+		components = line 
+		|> String.trim_leading
+		|> String.split
+
+		%{dataset | input_attributes: components}
+	end
+
+	@spec parse_header(__MODULE__, String.t) :: __MODULE__
+	def parse_header(dataset, "@outputs" <> line) do
+		components = line 
+		|> String.trim_leading
+		|> String.split
+
+		%{dataset | output_attributes: components}
+	end
+
+	@spec parse_header(__MODULE__, any) :: __MODULE__
+	def parse_header(dataset, _), do: dataset
+
+	@spec recheck_validity(__MODULE__) :: __MODULE__ | :error
+	def recheck_validity(dataset), do: dataset
+
+	@spec parse(String.t, (({Dataset, Row} | :error) -> none)) :: none
+	def parse(path, handler) do
+		path
+		|> File.stream!([:read_ahead, :utf8], :line)
+		|> Stream.with_index
+		|> Stream.transform(%__MODULE__{valid: false}, fn({line, index}, acc) -> 
+			line = line |> String.trim
+
+			if String.starts_with?(line, "@") do
+				result = acc 
+				|> __MODULE__.parse_header(line)
+
+				case result do
+				  :error ->
+						{:halt, acc}
+					acc ->
+						Logger.warn inspect line
+						Logger.warn inspect acc
+
+						{[line], acc}
+				end
+			else
+				result = if acc.valid do
+					acc
+				else
+					acc |> __MODULE__.recheck_validity
+				end
+
+				case result do
+				  :error ->
+						handler.(:error)
+						{:halt, acc}
+					acc ->
+						Logger.warn inspect line
+						Logger.warn inspect acc
+
+						handler.({acc, line})
+						{[line], acc}				    
+				end
+			end
+		end)
+		|> Stream.run
 	end
 end
+
+defmodule KNN.Helper.KeelParser do
+	alias KNN.Helper.KeelDataset, as: Dataset
+	alias KNN.Helper.KeelDataRow, as: Row
+
+	@spec parse_from_file(String.t, (({Dataset, Row} | :error) -> none)) :: none
+	def parse_from_file(path, handler) do
+		# passing this off for now
+		Dataset.parse path, handler
+	end
+end
+
+# defmodule KNN.Helper.KeelParser do
+# 	use GenStage
+
+# 	require Logger
+
+# 	alias KNN.Helper.KeelHeader, as: Header
+
+# 	def init(path) do
+# 		Logger.warn "keel parser producer init"
+# 		# do initial parsing here, and pass off a KeelDataset
+# 		{:producer, path}	
+# 	end
+
+# 	def handle_demand(demand, path) when demand > 0 do
+# 		Logger.warn demand
+# 		Logger.warn path
+
+# 		# events = Enum.to_list(counter..counter+demand-1)
+# 		{:noreply, ["test event"], ""}
+# 	end
+
+# 	def parse() do
+		
+# 	end
+# end
 
 defmodule KNN.Helper.KeelParserProducerConsumer do
 	use GenStage
