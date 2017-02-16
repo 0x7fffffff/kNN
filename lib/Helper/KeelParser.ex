@@ -10,76 +10,100 @@
 # @outputs Class
 
 defmodule KNN.Helper.KeelAttribute do
-	defstruct [:name, :inner_data_type, :data]
+	defstruct [:name, :inner_data_type, :data] # data is {:collection_type, [item]}
 
-	# This is sloppy, but it should work for our test data.
-	@spec parse(String.t) :: __MODULE__
-	def parse(line) do
-		opts = line
-		|> String.trim
-		|> String.split
-		|> Enum.reduce(%{}, fn(component, acc) -> 
-			component = component |> String.trim
+	alias KNN.Helper.StringExt
 
-			if Map.has_key? acc, :name do
-				{collection_type, items} = parse_collection component
+	require Logger
 
-				if collection_type do
-					Map.put acc, :data, {collection_type, items}
-				else
-					data_type = get_data_type component
-
-					if data_type do
-						Map.put acc, :inner_date_type, data_type
-					else
-						# Need to build in error checking, this can crash.
-						acc
-					end
-				end
-			else
-				Map.put acc, :name, component
-			end
-		end)
-
-		struct __MODULE__, opts
-	end
-
-	@spec parse_collection(String.t) :: {:range | :set | nil, [any]}
-	defp parse_collection(str) do
-		cond do
-		  String.starts_with?(str, "[") and String.ends_with?(str, "]") ->
-				{:range, split_collection str}
-			String.starts_with?(str, "{") and String.ends_with?(str, "}") ->
-				{:set, split_collection str}
-			true ->
-				{nil, []}
+	@spec parse_collection(String.t) :: {:ok, :range, tuple} | {:ok, :set, tuple} | :error
+	defp parse_collection(line) do
+		case StringExt.between(line, "{", "}") do
+		  {:ok, result} ->
+		  	{:ok, :set, result}
+		  _ ->
+		  	case StringExt.between(line, "[", "]") do
+		  	  {:ok, result} ->
+				  	{:ok, :range, result}
+				  _ ->
+				  	:error
+		  	end
 		end
 	end
 
-	@spec split_collection(String.t) :: [any]
-	defp split_collection(str) do
-  	str
-  	|> String.trim_leading("[")
-  	|> String.trim_trailing("]")
-  	|> String.split(", ")
+	# This is sloppy, but it should work for our test data.
+	# @spec parse(String.t) :: __MODULE__
+	def parse(line) do
+		line = line |> String.trim
+
+		{collection, type, {_, end_index}} = case parse_collection line do
+		  {:ok, type, {parsed, range}} ->
+		  	collection = parsed
+		  	|> String.split(", ")
+
+		  	{collection, type, range}
+		  :error ->
+		  	end_index = line
+		  	|> String.graphemes
+		  	|> Enum.count
+
+		  	{[], nil, {end_index, 0}}
+		end
+
+		components = line
+		|> String.slice(0..end_index)
+		|> String.split
+
+		attribute = %__MODULE__{}
+
+		{name, components} = components |> List.pop_at(0)
+		attribute = if name do
+			%{attribute | name: String.trim(name)}
+		else
+			attribute
+		end
+
+		{inner_data_type, _} = components |> List.pop_at(0)
+		inner_data_type = inner_data_type |> String.trim |> get_data_type
+
+		attribute = if inner_data_type do
+			%{attribute | inner_data_type: inner_data_type}
+		else
+			attribute
+		end
+
+		# set or range
+		case type do
+			nil ->
+				attribute
+			:set ->
+				if inner_data_type && inner_data_type == :number do
+					%{attribute | data: {type, Enum.map(collection, &String.to_float(&1))}}
+				else
+					%{attribute | data: {type, collection}}
+				end
+			:range ->
+				if inner_data_type && inner_data_type == :number do
+					mapped = Enum.map(collection, &String.to_float(&1))
+
+					%{attribute | data: {type, {Enum.at(mapped, 0), Enum.at(mapped, 1)}}}
+				else
+					%{attribute | data: {type, collection}}
+				end
+		end
 	end
 
 	@spec get_data_type(String.t) :: :number | :binary | nil
 	defp get_data_type(str) do
 		case str do
-		  "real" ->
-		  	:number
-		  "string" ->
-		  	:binary
-		  _ ->
-		  	nil
+			"real" ->
+				:number
+			"string" ->
+				:binary
+			_ ->
+				nil
 		end
 	end
-end
-
-defmodule KNN.Helper.KeelDataRow do
-	@enforce_keys [:data_components]
-	defstruct [:data_components]
 end
 
 defmodule KNN.Helper.KeelDataset do
@@ -88,7 +112,6 @@ defmodule KNN.Helper.KeelDataset do
 	defstruct [:relation, :attributes, :input_attributes, :output_attributes, :valid]
 
 	alias KNN.Helper.KeelDataset, as: Dataset
-	alias KNN.Helper.KeelDataRow, as: Row
 	alias KNN.Helper.KeelAttribute, as: Attribute
 
 	require Logger
@@ -118,7 +141,7 @@ defmodule KNN.Helper.KeelDataset do
 	def parse_header(dataset, "@inputs" <> line) do
 		components = line 
 		|> String.trim_leading
-		|> String.split
+		|> String.split(", ")
 
 		%{dataset | input_attributes: components}
 	end
@@ -136,14 +159,50 @@ defmodule KNN.Helper.KeelDataset do
 	def parse_header(dataset, _), do: dataset
 
 	@spec recheck_validity(__MODULE__) :: __MODULE__ | :error
-	def recheck_validity(dataset), do: dataset
+	def recheck_validity(dataset) do
+		if dataset.input_attributes && dataset.output_attributes && dataset.attributes do
+			all = dataset.input_attributes ++ dataset.output_attributes
 
-	@spec parse(String.t, (({Dataset, Row} | :error) -> none)) :: none
+			valid = Enum.count(dataset.attributes) == Enum.count(dataset.input_attributes) + Enum.count(dataset.output_attributes)
+				and Enum.all?(dataset.attributes, fn(attr) ->
+					Enum.any?(all, fn(attr_name) ->
+						attr.name == attr_name
+					end)
+			end)
+
+			%{dataset | valid: valid}
+		else
+			dataset
+		end
+	end
+
+	@spec parse_row_from_headers(__MODULE__, String.t) :: %{}
+	def parse_row_from_headers(dataset, line) do
+		values = line |> String.split(", ")
+
+		dataset.attributes
+		|> Enum.with_index
+		|> Enum.reduce(%{}, fn({attr, index}, acc) -> 
+			value = Enum.at values, index
+
+			if value do
+				if attr.inner_data_type && attr.inner_data_type == :number do
+					Map.put acc, attr.name, String.to_float(value)
+				else
+					Map.put acc, attr.name, value
+				end
+			else
+				acc
+			end
+		end)
+	end
+
+	@spec parse(String.t, (({Dataset, %{required(String.t) => any}} | :error) -> none)) :: none
 	def parse(path, handler) do
 		path
 		|> File.stream!([:read_ahead, :utf8], :line)
 		|> Stream.with_index
-		|> Stream.transform(%__MODULE__{valid: false}, fn({line, index}, acc) -> 
+		|> Stream.transform(%__MODULE__{valid: false}, fn({line, _index}, acc) -> 
 			line = line |> String.trim
 
 			if String.starts_with?(line, "@") do
@@ -151,31 +210,19 @@ defmodule KNN.Helper.KeelDataset do
 				|> __MODULE__.parse_header(line)
 
 				case result do
-				  :error ->
-						{:halt, acc}
-					acc ->
-						Logger.warn inspect line
-						Logger.warn inspect acc
-
-						{[line], acc}
-				end
-			else
-				result = if acc.valid do
-					acc
-				else
-					acc |> __MODULE__.recheck_validity
-				end
-
-				case result do
-				  :error ->
+					:error ->
 						handler.(:error)
 						{:halt, acc}
 					acc ->
-						Logger.warn inspect line
-						Logger.warn inspect acc
-
-						handler.({acc, line})
-						{[line], acc}				    
+						{[line], __MODULE__.recheck_validity(acc)}
+				end
+			else
+				if acc.valid do
+					handler.({acc, parse_row_from_headers(acc, line)})
+					{[line], acc}
+				else
+					handler.(:error)
+					{:halt, acc}
 				end
 			end
 		end)
@@ -185,9 +232,8 @@ end
 
 defmodule KNN.Helper.KeelParser do
 	alias KNN.Helper.KeelDataset, as: Dataset
-	alias KNN.Helper.KeelDataRow, as: Row
 
-	@spec parse_from_file(String.t, (({Dataset, Row} | :error) -> none)) :: none
+	@spec parse_from_file(String.t, (({Dataset, %{required(String.t) => any}} | :error) -> none)) :: none
 	def parse_from_file(path, handler) do
 		# passing this off for now
 		Dataset.parse path, handler
@@ -233,8 +279,8 @@ defmodule KNN.Helper.KeelParserProducerConsumer do
 	def handle_events(events, _from, payload) do
 		Logger.error "keel product/consumer received event: #{payload}"
 
-    {:noreply, ["test event"], payload}
-   end
+		{:noreply, ["test event"], payload}
+	 end
 end
 
 defmodule KNN.Helper.TestConsumer do

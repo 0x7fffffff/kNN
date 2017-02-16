@@ -26,7 +26,8 @@ defmodule KNN.Node.Command do
     KNN.Helper.KeelParser.parse_from_file path, fn(result) -> 
     	case result do
     	  {dataset, row} ->
-		    	Logger.warn "received record: #{row}"
+    	  	Logger.warn "dataset: #{inspect dataset}"
+		    	Logger.warn "received record: #{inspect row}"
 		    :error ->
 		    	Logger.error "Parser failed"
     	end
