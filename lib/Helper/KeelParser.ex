@@ -19,15 +19,15 @@ defmodule KNN.Helper.KeelAttribute do
 	@spec parse_collection(String.t) :: {:ok, :range, tuple} | {:ok, :set, tuple} | :error
 	defp parse_collection(line) do
 		case StringExt.between(line, "{", "}") do
-		  {:ok, result} ->
-		  	{:ok, :set, result}
-		  _ ->
-		  	case StringExt.between(line, "[", "]") do
-		  	  {:ok, result} ->
-				  	{:ok, :range, result}
-				  _ ->
-				  	:error
-		  	end
+			{:ok, result} ->
+				{:ok, :set, result}
+			_ ->
+				case StringExt.between(line, "[", "]") do
+					{:ok, result} ->
+						{:ok, :range, result}
+					_ ->
+						:error
+				end
 		end
 	end
 
@@ -37,17 +37,17 @@ defmodule KNN.Helper.KeelAttribute do
 		line = line |> String.trim
 
 		{collection, type, {_, end_index}} = case parse_collection line do
-		  {:ok, type, {parsed, range}} ->
-		  	collection = parsed
-		  	|> String.split(", ")
+			{:ok, type, {parsed, range}} ->
+				collection = parsed
+				|> String.split(", ")
 
-		  	{collection, type, range}
-		  :error ->
-		  	end_index = line
-		  	|> String.graphemes
-		  	|> Enum.count
+				{collection, type, range}
+			:error ->
+				end_index = line
+				|> String.graphemes
+				|> Enum.count
 
-		  	{[], nil, {end_index, 0}}
+				{[], nil, {end_index, 0}}
 		end
 
 		components = line
