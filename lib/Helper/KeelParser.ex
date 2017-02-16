@@ -1,14 +1,4 @@
 
-
-# @relation iris
-# @attribute SepalLength real [4.3, 7.9]
-# @attribute SepalWidth real [2.0, 4.4]
-# @attribute PetalLength real [1.0, 6.9]
-# @attribute PetalWidth real [0.1, 2.5]
-# @attribute Class {Iris-setosa, Iris-versicolor, Iris-virginica}
-# @inputs SepalLength, SepalWidth, PetalLength, PetalWidth
-# @outputs Class
-
 defmodule KNN.Helper.KeelAttribute do
 	defstruct [:name, :inner_data_type, :data] # data is {:collection_type, [item]}
 
@@ -32,14 +22,13 @@ defmodule KNN.Helper.KeelAttribute do
 	end
 
 	# This is sloppy, but it should work for our test data.
-	# @spec parse(String.t) :: __MODULE__
+	@spec parse(String.t) :: __MODULE__
 	def parse(line) do
 		line = line |> String.trim
 
 		{collection, type, {_, end_index}} = case parse_collection line do
 			{:ok, type, {parsed, range}} ->
-				collection = parsed
-				|> String.split(", ")
+				collection = parsed |> String.split(", ")
 
 				{collection, type, range}
 			:error ->
@@ -64,7 +53,10 @@ defmodule KNN.Helper.KeelAttribute do
 		end
 
 		{inner_data_type, _} = components |> List.pop_at(0)
-		inner_data_type = inner_data_type |> String.trim |> get_data_type
+
+		inner_data_type = inner_data_type 
+		|> String.trim
+		|> get_data_type
 
 		attribute = if inner_data_type do
 			%{attribute | inner_data_type: inner_data_type}
@@ -107,7 +99,6 @@ defmodule KNN.Helper.KeelAttribute do
 end
 
 defmodule KNN.Helper.KeelDataset do
-	# @enforce_keys [:relation, :attributes, :input_attributes, :output_attributes]
 	@enforce_keys [:valid]
 	defstruct [:relation, :attributes, :input_attributes, :output_attributes, :valid]
 
@@ -206,8 +197,7 @@ defmodule KNN.Helper.KeelDataset do
 			line = line |> String.trim
 
 			if String.starts_with?(line, "@") do
-				result = acc 
-				|> __MODULE__.parse_header(line)
+				result = acc |> __MODULE__.parse_header(line)
 
 				case result do
 					:error ->
