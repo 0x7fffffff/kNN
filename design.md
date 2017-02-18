@@ -33,14 +33,10 @@ Possible Implementation
 -----------------------
 
 #####Command Node
-- [ ] Keel Parser
-	- producer/consumer via GenStage
-		- Start with reference to file location
-			- Parses headers/etc
-	- Producer 
-		- Emits lines 1 by 1
-	- Consumer
-		- Sends data record to the appropriate storage node
+- [x] Keel Parser
+  - [x] Parses Headers
+  - [x] Parses Records
+  - [x] Emits records with dataset as they are generated.
 - [ ] Keeps track of all discoverable nodes
 - [ ] Needs to maintain a map between each connected node and its "job".
 	- Will rely on keel parser having already run
