@@ -13,3 +13,12 @@ defmodule KNN.Helper.StringExt do
 		end
 	end
 end
+
+defmodule KNN.Helper.EnumExt do
+	@spec contains([any], any) :: boolean
+	def contains(items, object) do
+		Enum.any? items, fn(item) -> 
+			item == object
+		end
+	end
+end

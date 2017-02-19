@@ -3,6 +3,8 @@ defmodule KNN.Node.Command.Apollo do
 
 	require Logger
 
+  alias KNN.Helper.EnumExt
+
 	def start_link(args) do
 		Logger.debug "Starting apollo with args: #{args}"
 		GenServer.start_link __MODULE__, %{}, name: __MODULE__
@@ -13,7 +15,7 @@ defmodule KNN.Node.Command.Apollo do
 	def init(_state) do
     store = %{
       timer: make_timer(),
-      tracking: %{}
+      tracking: %{store_nodes: [], mesh_nodes: []}
     }
 
     {:ok, store}
@@ -24,7 +26,7 @@ defmodule KNN.Node.Command.Apollo do
 
     store = %{
       timer: make_timer(),
-      tracking: %{}
+      tracking: %{store_nodes: [], mesh_nodes: []}
     }
 
 		{:reply, :ok, store}
@@ -34,20 +36,29 @@ defmodule KNN.Node.Command.Apollo do
   # should split store/mesh node counts in roughly half
   # 
 
-	def handle_info(:tick, %{tracking: %{} = tracking}) do
-		# do stuff here
-		Logger.debug "Tick"
-    new_tracking = Node.list
-    |> Enum.reduce(%{}, fn(node, acc) -> 
-      acc |> Map.put(node, true)
+	def handle_info(:tick, %{tracking: %{store_nodes: store_nodes, mesh_nodes: mesh_nodes}}) do
+    new_nodes = Node.list
+    |> Enum.reject(fn(node) -> 
+      EnumExt.contains(store_nodes, node) 
+        or EnumExt.contains(mesh_nodes, node)
     end)
-    |> Map.merge(tracking)
-      
-		Logger.debug inspect new_tracking
+
+    {store_nodes, mesh_nodes} = new_nodes
+    |> Enum.reduce({store_nodes, mesh_nodes}, fn(node, {store_nodes, mesh_nodes}) -> 
+      num_store = Enum.count store_nodes
+      num_mesh = Enum.count mesh_nodes
+
+      cond do
+        num_mesh > num_store ->
+          {store_nodes ++ [node], mesh_nodes}
+        num_mesh < num_store or num_mesh == num_store ->
+          {store_nodes, mesh_nodes ++ [node]}
+      end      
+    end)
 		
     store = %{
       timer: make_timer(),
-      tracking: new_tracking
+      tracking: %{store_nodes: store_nodes, mesh_nodes: mesh_nodes}
     }
 
     {:noreply, store}
