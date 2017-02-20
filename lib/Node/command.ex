@@ -3,31 +3,35 @@ defmodule KNN.Node.Command do
 
 	require Logger
 
-	def start_link(args) do
-		Logger.debug "Starting commander with args: #{args}"
-		GenServer.start_link __MODULE__, %{}
+	def start_link(parent_pid) do
+		Logger.debug "Starting commander with args: #{inspect parent_pid}"
+		GenServer.start_link __MODULE__, %{parent_pid: parent_pid}
 	end
 
-	def init(state) do
+	def init(initial_state) do
 		Logger.debug "Reached Command node init"
-		start()
-		{:ok, state}
+
+		start(initial_state[:parent_pid])
+		{:ok, initial_state}
 	end
 
-	def handle_info(:start, state) do
+	def handle_info(:start, initial_state) do
 		Logger.debug "Reached Command node start"
-		start()
-		{:noreply, state}
+		start(initial_state[:parent_pid])
+		{:noreply, initial_state}
 	end
 
-	defp start do
+	defp start(parent_pid) when is_pid(parent_pid) do
     # should probably move data path into ENV VAR
     path = "data/iris/iris.dat"
+
     KNN.Helper.KeelParser.parse_from_file path, fn(result) -> 
     	case result do
     	  {dataset, row} ->
-    	  	Logger.warn "dataset: #{inspect dataset}"
-		    	Logger.warn "received record: #{inspect row}"
+    	  # 	Logger.warn "dataset: #{inspect dataset}"
+		    	# Logger.warn "received record: #{inspect row}"
+		    	# Logger.debug "Finished parsing dataset"
+		    	nil
 		    :error ->
 		    	Logger.error "Parser failed"
     	end

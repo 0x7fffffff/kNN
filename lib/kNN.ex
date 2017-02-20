@@ -12,21 +12,25 @@ defmodule KNN do
   alias KNN.Node.Command
   alias KNN.Node.Command.Apollo
   alias KNN.Node.Store
+  alias KNN.Helper.KeelDataset
 
   def start(_type, _args) do
     Logger.debug "Starting node \"" <> System.get_env("NODE_NAME") <> "\" of type: \"" <> System.get_env("NODE_TYPE") <> "\""
 
     children = case System.get_env("NODE_TYPE") do
       "command" ->
+        Logger.debug "received command type"
         [
-          worker(Command, [:command], [name: Command]),
-          worker(Apollo, [:apollo], [name: Apollo])
+          worker(Command, [self()], [name: Command]),
+          worker(Apollo, [self()], [name: Apollo])
         ]
       "store" ->
+        Logger.debug "received store type"
         [
           worker(Store, [[name: :knn_storage_server]])
         ]
       "mesh" ->
+        Logger.debug "received mesh type"
         []
     end
 
@@ -36,5 +40,10 @@ defmodule KNN do
     #
     opts = [strategy: :one_for_one, name: KNN.Supervisor]
     Supervisor.start_link(children, opts)
+  end
+
+  @spec receive_data(%KeelDataset{}, %{}) :: none
+  def receive_data(dataset, row) do
+    
   end
 end

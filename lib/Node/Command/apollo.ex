@@ -6,7 +6,7 @@ defmodule KNN.Node.Command.Apollo do
   alias KNN.Helper.EnumExt
 
 	def start_link(args) do
-		Logger.debug "Starting apollo with args: #{args}"
+		Logger.debug "Starting apollo with args: #{inspect args}"
 		GenServer.start_link __MODULE__, %{}, name: __MODULE__
 	end
 
@@ -69,5 +69,5 @@ defmodule KNN.Node.Command.Apollo do
     
   end
 
-	defp make_timer, do: Process.send_after self(), :tick, 5_000 # every 5 seconds
+	defp make_timer, do: Process.send_after self(), :tick, 30_000 # every 30 seconds
 end
