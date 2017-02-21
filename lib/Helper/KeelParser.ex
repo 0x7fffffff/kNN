@@ -146,6 +146,11 @@ defmodule KNN.Helper.KeelDataset do
 		%{dataset | output_attributes: components}
 	end
 
+		@spec parse_header(__MODULE__, String.t) :: __MODULE__
+		def parse_header(dataset, "@data") do
+			__MODULE__.recheck_validity(dataset)
+		end
+
 	@spec parse_header(__MODULE__, any) :: __MODULE__
 	def parse_header(dataset, _), do: dataset
 
@@ -204,7 +209,7 @@ defmodule KNN.Helper.KeelDataset do
 						handler.(:error)
 						{:halt, acc}
 					acc ->
-						{[line], __MODULE__.recheck_validity(acc)}
+						{[line], acc}
 				end
 			else
 				if acc.valid do
