@@ -9,4 +9,4 @@ fi
 
 mix deps.get
 
-NODE_NAME=$nodeName NODE_TYPE=$nodeType iex --name $nodeName --erl "-config sys.config" -S mix
+DATA_PATH="data/iris/iris.dat" NODE_NAME=$nodeName NODE_TYPE=$nodeType iex --name $nodeName --erl "-config sys.config" -S mix

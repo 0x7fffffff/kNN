@@ -22,8 +22,7 @@ defmodule KNN.Node.Command do
 	end
 
 	defp start(parent_pid) when is_pid(parent_pid) do
-    # should probably move data path into ENV VAR
-    path = "data/iris/iris.dat"
+    path = System.get_env("DATA_PATH") || "data/iris/iris.dat"
 
     KNN.Helper.KeelParser.parse_from_file path, fn(result) -> 
     	case result do
