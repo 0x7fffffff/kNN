@@ -15,14 +15,38 @@ defmodule KNN do
   alias KNN.Helper.KeelDataset
 
   def start(_type, _args) do
-    Logger.debug "Starting node \"" <> System.get_env("NODE_NAME") <> "\" of type: \"" <> System.get_env("NODE_TYPE") <> "\""
+    # New plan: Instead of launching each node based on ENV vars or w/e, 
+    # just launch a pool of mesh PIDs based on the mesh size,
+    # and a pool of test storage nodes
+    # and a pool of train storage nodes
 
-    result = case System.get_env("NODE_TYPE") do
+    # become("")
+    # TODO: Figure out how to build a proper app here
+
+
+  end
+
+  defp mesh_pool_config(square_dim) do
+
+  end
+
+  defp storage_pool_config(num_node, storage_type) do
+    
+  end
+
+  defp become(nodetype) do
+    Logger.debug "Starting node \"" <> System.get_env("NODE_NAME") <> "\" of type: \"" <> System.get_env("NODE_TYPE") <> "\""
+    type = case nodetype do
+      "" -> System.get_env("NODE_TYPE")
+      x -> x
+    end
+
+    result = case type do
       "command" ->
         Logger.debug "received command type"
         children = [
-          worker(Command, [self()], [name: Command]),
-          worker(Apollo, [self()], [name: Apollo])
+          Supervisor.Spec.worker(Command, [self()], [name: Command]),
+          Supervisor.Spec.worker(Apollo, [self()], [name: Apollo])
         ]
 
         {:ok, children}

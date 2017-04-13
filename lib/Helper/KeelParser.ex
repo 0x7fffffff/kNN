@@ -9,14 +9,11 @@ defmodule KNN.Helper.KeelAttribute do
 	@spec parse_collection(String.t) :: {:ok, :range, tuple} | {:ok, :set, tuple} | :error
 	defp parse_collection(line) do
 		case StringExt.between(line, "{", "}") do
-			{:ok, result} ->
-				{:ok, :set, result}
+			{:ok, result} -> {:ok, :set, result}
 			_ ->
 				case StringExt.between(line, "[", "]") do
-					{:ok, result} ->
-						{:ok, :range, result}
-					_ ->
-						:error
+					{:ok, result} -> {:ok, :range, result}
+					_ -> :error
 				end
 		end
 	end
@@ -45,18 +42,15 @@ defmodule KNN.Helper.KeelAttribute do
 
 		attribute = %__MODULE__{}
 
-		{name, components} = components |> List.pop_at(0)
+		[name | components] = components 
 		attribute = if name do
 			%{attribute | name: String.trim(name)}
 		else
 			attribute
 		end
 
-		{inner_data_type, _} = components |> List.pop_at(0)
-
-		inner_data_type = inner_data_type 
-		|> String.trim
-		|> get_data_type
+		[inner_data_type | components] = components
+		inner_data_type = String.trim(inner_data_type) |> get_data_type
 
 		attribute = if inner_data_type do
 			%{attribute | inner_data_type: inner_data_type}
@@ -208,8 +202,7 @@ defmodule KNN.Helper.KeelDataset do
 					:error ->
 						handler.(:error)
 						{:halt, acc}
-					acc ->
-						{[line], acc}
+					acc -> {[line], acc}
 				end
 			else
 				if acc.valid do
