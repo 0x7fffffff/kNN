@@ -22,8 +22,7 @@ defmodule KNN do
 
     # become("")
     # TODO: Figure out how to build a proper app here
-
-
+    {:ok, self()}
   end
 
   defp mesh_pool_config(square_dim) do
@@ -46,7 +45,7 @@ defmodule KNN do
         Logger.debug "received command type"
         children = [
           Supervisor.Spec.worker(Command, [self()], [name: Command]),
-          Supervisor.Spec.worker(Apollo, [self()], [name: Apollo])
+          # Supervisor.Spec.worker(Apollo, [self()], [name: Apollo])
         ]
 
         {:ok, children}

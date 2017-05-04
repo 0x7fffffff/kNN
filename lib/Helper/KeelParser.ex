@@ -21,7 +21,7 @@ defmodule KNN.Helper.KeelAttribute do
 	# This is sloppy, but it should work for our test data.
 	@spec parse(String.t) :: __MODULE__
 	def parse(line) do
-		line = line |> String.trim
+		line = String.trim(line)
 
 		{collection, type, {_, end_index}} = case parse_collection line do
 			{:ok, type, {parsed, range}} ->
@@ -82,19 +82,23 @@ defmodule KNN.Helper.KeelAttribute do
 	@spec get_data_type(String.t) :: :number | :binary | nil
 	defp get_data_type(str) do
 		case str do
-			"real" ->
-				:number
-			"string" ->
-				:binary
-			_ ->
-				nil
+			"real" -> :number
+			"string" -> :binary
+			_ -> nil
 		end
 	end
 end
 
 defmodule KNN.Helper.KeelDataset do
 	@enforce_keys [:valid]
-	defstruct [:relation, :attributes, :input_attributes, :output_attributes, :valid]
+	defstruct [
+      :relation,
+      :attributes,
+      :input_attributes,
+      :output_attributes,
+      :valid,
+      lines_used: 0
+    ]
 
 	alias KNN.Helper.KeelDataset, as: Dataset
 	alias KNN.Helper.KeelAttribute, as: Attribute
@@ -192,25 +196,26 @@ defmodule KNN.Helper.KeelDataset do
 		path
 		|> File.stream!([:read_ahead, :utf8], :line)
 		|> Stream.with_index
-		|> Stream.transform(%__MODULE__{valid: false}, fn({line, _index}, acc) -> 
+		|> Stream.transform(%__MODULE__{valid: false}, fn({line, index}, dataset) -> 
 			line = line |> String.trim
 
 			if String.starts_with?(line, "@") do
-				result = acc |> __MODULE__.parse_header(line)
+				result = parse_header(dataset, line)
+                dataset = %{dataset | lines_used: dataset.lines_used + 1 }
 
 				case result do
 					:error ->
 						handler.(:error)
-						{:halt, acc}
-					acc -> {[line], acc}
+						{:halt, dataset}
+					dataset -> {[line], dataset}
 				end
 			else
-				if acc.valid do
-					handler.({acc, parse_row_from_headers(acc, line)})
-					{[line], acc}
+				if dataset.valid do
+					handler.({dataset, parse_row_from_headers(dataset, line), index - dataset.lines_used})
+					{[line], dataset}
 				else
 					handler.(:error)
-					{:halt, acc}
+					{:halt, dataset}
 				end
 			end
 		end)

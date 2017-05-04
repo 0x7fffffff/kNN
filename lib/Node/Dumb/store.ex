@@ -13,13 +13,9 @@ defmodule KNN.Node.Store do
   end
 
   # Get the data associated with 
-  def get_for_cell(pid, cell_bounds) do
-    GenServer.call(pid, {:get_for_cell, cell_bounds})
-  end
+  def get_for_cell(pid, cell_bounds) do GenServer.call(pid, {:get_for_cell, cell_bounds}) end
 
-  def add_record(pid, record) do
-    GenServer.cast(pid, {:append, record})
-  end
+  def add_record(pid, record) do GenServer.call(pid, {:append, record}) end
 
   # GenServer callbacks
   def handle_call({:append, new_record}, _from, {records, x_attr, y_attr}) do
@@ -47,8 +43,8 @@ defmodule KNN.Node.Store do
     end)
   end
 
-  def init({records, x_attr, y_attr}) do
+  def init(state = {_records, _x_attr, _y_attr}) do
     Logger.info "Initializing kNN Storage GenServer"
-    {:ok, records}
+    {:ok, state}
   end
 end

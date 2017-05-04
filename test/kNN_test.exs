@@ -39,4 +39,10 @@ defmodule KNNTest do
 
   end
 
+  test "Bounds work" do
+    bound = KNN.Structs.Bounds.new(1.0, 2.0, 5.0, 6.0)
+
+    assert (KNN.Structs.Bounds.point_in(bound, {1.5, 5.5}))
+  end
+
 end

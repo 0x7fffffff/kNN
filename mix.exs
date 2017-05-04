@@ -39,7 +39,6 @@ defmodule KNN.Mixfile do
   # Or git/path repositories:
   #
   #   {:my_dep, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
-  #
   # Type "mix help deps" for more examples and options
   defp deps do
     [
@@ -49,10 +48,13 @@ defmodule KNN.Mixfile do
     ]
   end
 
-  defp aliases do
-    # "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-    [
-      
-    ]
-  end
+
+  # TODO: Bring this 
+  #  defp aliases do
+  #    # "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
+  #    [
+  #      
+  #    ]
+  #  end
+
 end

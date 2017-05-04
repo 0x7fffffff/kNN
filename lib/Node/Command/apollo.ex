@@ -49,8 +49,8 @@ defmodule KNN.Node.Command.Apollo do
       num_mesh = Enum.count mesh_nodes
 
       cond do
-        num_mesh > num_store ->
-          {store_nodes ++ [node], mesh_nodes}
+        num_mesh > num_store -> {store_nodes ++ [node], mesh_nodes}
+
         num_mesh < num_store or num_mesh == num_store ->
           {store_nodes, mesh_nodes ++ [node]}
       end      
